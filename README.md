@@ -1,4 +1,4 @@
-Nama : Lynorexly
+Nama : Lynorexly Imanuel Tatipikalawan
 
 NPM : 2506546932
 
