@@ -289,6 +289,7 @@ h1, .brand {
 .experience-content > p:not(.experience-type) {
     color: var(--text-muted);
     font-size: 0.9rem;
+    min-height: 135px;
 }
 
 
