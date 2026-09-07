@@ -281,6 +281,7 @@ h1, .brand {
 }
 
 .experience-content h3 {
+    min-height: 3.5rem;
     font-family: "Space Grotesk", sans-serif;
     font-size: 1.4rem;
     margin-bottom: 0.75rem;
