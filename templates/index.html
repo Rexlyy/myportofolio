@@ -16,6 +16,7 @@
             <nav>
                 <a href="{% url 'main:show_main' %}">Profile</a>
                 <a href="{% url 'main:show_experience' %}">Experience</a>
+                <a href="{% url 'main:show_skill'%}">Skills</a>
             </nav>
         </div>
     </header>
@@ -121,6 +122,66 @@
                     </div>
             </div>
         </section>
+
+        <section class="skills-section">
+    <div class="container">
+
+        <div class="skills-heading">
+            <p class="section-kicker">What I Know</p>
+            <h2>My Skills</h2>
+        </div>
+
+        {% if skill_list %}
+            <div class="skills-grid">
+
+                {% for skill in skill_list %}
+                    <article class="skill-card">
+
+                        <div class="skill-card-header">
+                            <h3>{{ skill.name }}</h3>
+
+                            <span class="skill-category">
+                                {{ skill.category }}
+                            </span>
+                        </div>
+
+                        <div class="skill-proficiency">
+                            <div class="proficiency-info">
+                                <span>Proficiency</span>
+                                <span>{{ skill.proficiency }}%</span>
+                            </div>
+
+                            <div class="proficiency-bar">
+                                <div
+                                    class="proficiency-fill"
+                                    style="--skill-width: {{ skill.proficiency }}%;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="skill-description">
+                            {{ skill.description }}
+                        </p>
+
+                    </article>
+                {% endfor %}
+
+            </div>
+
+            <div class="section-link">
+                <a href="{% url 'main:show_skill' %}">
+                    View all skills →
+                </a>
+            </div>
+
+        {% else %}
+            <p class="empty-state">
+                Belum ada skill yang ditambahkan.
+            </p>
+        {% endif %}
+
+    </div>
+</section>
     </main>
 
     <footer class="site-footer">
