@@ -1,92 +1,109 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+{% block meta %}
     <title>Skills - {{ name }}</title>
+{% endblock meta %}
 
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-</head>
+{% block content %}
 
-<body>
+<main>
 
-    <header class="site-header">
+    <section class="skills-section">
+
         <div class="container">
 
-            <a href="{% url 'main:show_main' %}" class="brand">
-                Lynorexly Imanuel Tatipikalawan
-            </a>
-
-            <nav>
-                <a href="{% url 'main:show_main' %}">Home</a>
-                <a href="{% url 'main:show_experience' %}">Experience</a>
-                <a href="{% url 'main:show_skill' %}">Skills</a>
-            </nav>
-
-        </div>
-    </header>
-
-
-    <main>
-
-        <section class="skills-section">
-
-            <div class="container">
+            <div class="skills-top">
 
                 <div class="skills-heading">
                     <p class="section-kicker">What I Know</p>
-
                     <h1>My Skills</h1>
                 </div>
 
+                
+                    <a href="{% url 'main:create_skill' %}" class="button">
+                        Add New Skill
+                    </a>
+                
 
-                {% if skill_list %}
+            </div>
 
-                    <div class="skills-grid">
+            <form
+                method="get"
+                action="{% url 'main:show_skill' %}"
+                class="skill-search"
+            >
+                <input
+                    type="search"
+                    name="name"
+                    value="{{ name_query }}"
+                    placeholder="Cari berdasarkan nama skill"
+                    class="skill-search__input"
+                    aria-label="Cari berdasarkan nama skill"
+                >
 
-                        {% for skill in skill_list %}
+                <button type="submit" class="button">
+                    Cari
+                </button>
+            </form>
 
-                            <article class="skill-card">
 
-                                <div class="skill-card-header">
+            {% if skill_list %}
 
+                <div class="skills-grid">
+
+                    {% for skill in skill_list %}
+
+                        <article class="skill-card">
+
+                            <div class="skill-card-header">
+
+                                <div>
                                     <h2>{{ skill.name }}</h2>
 
-                                    <span class="skill-category">
+                                    <p class="skill-category">
                                         {{ skill.category }}
-                                    </span>
+                                    </p>
+                                </div>
+
+                                <span class="skill-proficiency">
+                                    {{ skill.proficiency }}%
+                                </span>
+
+                            </div>
+
+
+                            <div class="proficiency-info">
+
+                                <div class="proficiency-bar">
+
+                                    <div
+                                        class="proficiency-fill"
+                                        style="--skill-width: {{ skill.proficiency }}%;"
+                                    ></div>
 
                                 </div>
 
-
-                                <div class="skill-proficiency">
-
-                                    <div class="proficiency-info">
-                                        <span>Proficiency</span>
-                                        <span>{{ skill.proficiency }}%</span>
-                                    </div>
-
-                                    <div class="proficiency-bar">
-                                        <div
-                                            class="proficiency-fill" style="--skill-width: {{skill.proficiency}}%;">
-                                        </div>
-                                    </div>
-
-                                </div>
+                            </div>
 
 
-                                <p class="skill-description">
-                                    {{ skill.description }}
-                                </p>
+                            <p class="skill-description">
+                                {{ skill.description }}
+                            </p>
 
-                            </article>
+                        </article>
 
-                        {% endfor %}
+                    {% endfor %}
 
-                    </div>
+                </div>
+
+
+            {% else %}
+
+                {% if name_query %}
+
+                    <p class="empty-state">
+                        Tidak ada skill dengan nama "{{ name_query }}".
+                    </p>
 
                 {% else %}
 
@@ -96,19 +113,12 @@
 
                 {% endif %}
 
-            </div>
+            {% endif %}
 
-        </section>
-
-    </main>
-
-
-    <footer class="site-footer">
-        <div class="container">
-            <p>© 2026 Lynorexly Imanuel Tatipikalawan. All rights reserved.</p>
         </div>
-    </footer>
 
-</body>
+    </section>
 
-</html>
+</main>
+
+{% endblock content %}

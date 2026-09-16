@@ -384,21 +384,29 @@ h1, .brand {
    Skills Section
    ================================ */
 
-.skills-section {
-    padding: 4rem 0 5rem;
-    border-top: 1px solid var(--line);
+.skills-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 3rem;
 }
 
 .skills-heading {
-    max-width: 600px;
-    margin-bottom: 2.5rem;
+    text-align: left;
+    margin: 0;
 }
 
 .skills-heading h1 {
-    font-family: "Space Grotesk", -apple-system, sans-serif;
-    font-size: clamp(2.5rem, 5vw, 4rem);
-    line-height: 1;
-    margin-top: 0.5rem;
+    margin: 0;
+}
+
+.skills-actions {
+    display: flex;
+    align-items: center;
+}
+
+.skills-top > .button {
+    flex-shrink: 0;
 }
 
 
@@ -408,6 +416,17 @@ h1, .brand {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.25rem;
+}
+
+.skills-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 3rem;
+}
+
+.skills-top > .button {
+    flex-shrink: 0;
 }
 
 
@@ -547,4 +566,84 @@ h1, .brand {
         grid-template-columns: 1fr;
     }
 
+}
+
+
+.skill-form {
+    width: 100%;
+    max-width: 700px;
+    margin-top: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background-color: white;
+    color: var(--ink);
+    font: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: 2px solid var(--accent);
+    border-color: var(--accent);
+}
+
+.form-error {
+    color: #b42318;
+    font-size: 0.85rem;
+    margin-top: 0.35rem;
+}
+
+.button {
+    display: inline-block;
+    padding: 0.7rem 1.2rem;
+    border: none;
+    border-radius: var(--radius);
+    background-color: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    cursor: pointer;
+    font: inherit;
+}
+
+.button-secondary {
+    background-color: var(--ink);
+}
+
+.skill-search {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.skill-search__input {
+    width: 100%;
+    min-width: 0;
+    padding: 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+}
+
+.skill-search__input:focus {
+    outline: 2px solid var(--accent);
+    border-color: var(--accent);
 }
