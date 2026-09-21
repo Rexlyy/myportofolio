@@ -1,24 +1,49 @@
 {% extends 'base.html' %}
 
 {% block meta %}
-    <title>Add Skill - {{ name }}</title>
+    <title>
+        {% if skill %}
+            Edit Skill - {{ name }}
+        {% else %}
+            Add Skill - {{ name }}
+        {% endif %}
+    </title>
 {% endblock meta %}
 
 {% block content %}
 
 <main>
+
     <section class="skills-section">
+
         <div class="container">
 
             <div class="skills-heading">
-                <p class="section-kicker">Add New Skill</p>
-                <h1>Add Skill</h1>
+
+                <p class="section-kicker">
+                    {% if skill %}
+                        Edit Skill
+                    {% else %}
+                        Add New Skill
+                    {% endif %}
+                </p>
+
+                <h1>
+                    {% if skill %}
+                        Edit {{ skill.name }}
+                    {% else %}
+                        Add Skill
+                    {% endif %}
+                </h1>
+
             </div>
 
-            <form method="POST">
+            <form method="POST" class="skill-form">
+
                 {% csrf_token %}
 
                 {% for field in form %}
+
                     <div class="form-group">
 
                         <label for="{{ field.id_for_label }}">
@@ -34,20 +59,32 @@
                         {% endif %}
 
                     </div>
+
                 {% endfor %}
 
                 <button type="submit" class="button">
-                    Tambah Skill
+
+                    {% if skill %}
+                        Update Skill
+                    {% else %}
+                        Tambah Skill
+                    {% endif %}
+
                 </button>
 
-                <a href="{% url 'main:show_skill' %}"class="button button-secondary">
+                <a
+                    href="{% url 'main:show_skill' %}"
+                    class="button button-secondary"
+                >
                     Batal
                 </a>
 
             </form>
 
         </div>
+
     </section>
+
 </main>
 
 {% endblock content %}

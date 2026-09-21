@@ -3,14 +3,14 @@ from main.models import Experience, Skill
 from .forms import SkillForm
 
 from django.contrib import messages
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 
 from django.core import serializers
 from django.http import HttpResponse
 
 
 def show_main(request):
-    experience_list = Experience.objects.all();
+    experience_list = Experience.objects.all()
     skill_list = Skill.objects.all()    
     context = {
         "name": "Lynorexly Imanuel Tatipikalawan",
@@ -92,3 +92,33 @@ def get_skills_json(request):
         skills_json,
         content_type="application/json"
     )
+
+def update_skill(request, skill_id):
+    skill = get_object_or_404(Skill, pk=skill_id)
+
+    form = SkillForm(request.POST or None, instance=skill)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+
+        messages.success(request, "Skill berhasil diperbarui")
+
+        return redirect("main:show_skill")
+
+    context = {
+        "name": "Lynorexly Imanuel Tatipikalawan",
+        "form": form,
+        "skill": skill,
+    }
+
+    return render(request, "skill_form.html", context)
+
+def delete_skill(request, skill_id):
+    skill = get_object_or_404(Skill, pk=skill_id)
+
+    if request.method == "POST":
+        skill.delete()
+
+        messages.success(request, "Skill berhasil dihapus!")
+
+        return redirect("main:show_skill")

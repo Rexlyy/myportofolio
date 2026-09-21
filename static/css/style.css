@@ -449,6 +449,18 @@ h1, .brand {
         background-color 0.2s ease;
 }
 
+/* Skill Card Actions */
+
+.skill-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+.skill-actions form {
+    margin: 0;
+}
+
 
 /* Skill Card Hover */
 
@@ -456,6 +468,16 @@ h1, .brand {
     transform: translateY(-6px);
     border-color: var(--accent);
     background-color: #fffaf4;
+}
+
+/* Button */
+
+.button-danger{
+    background-color: #b42318;
+}
+
+.button-danger:hover {
+    background-color: #8f1c14;
 }
 
 

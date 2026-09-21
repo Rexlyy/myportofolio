@@ -4,7 +4,7 @@ NPM : 2506546932
 
 Kelas : PBP F
 
-##Tugas2
-1. Ketika user membuka halaman, pada saat itu browser mengirim request ke urls.py proyek. Setelah itu di teruskan ke urls.py aplikasi untuk menentukan view yang  cocok. View mengambil data dari model mengirimkannya ke template, setelah itu data diubah template menjadi HTML yang kemudian dikirim kembali dan ditampilkan oleh browser.
-2. Data lebih baik disimpan pada model karena model itu sendiri memiliki fungsi untu mengelola data aplikasi di dalam databse. Karena dengan menyimpan data dalama model informasi-informasi dapat atur secara terstruktur tanpa perlu mengubah kode template nya.
-3. makemigrations digunakan untuk membuat migration file, sedangkan migrate digunakan sebagai penerapan migration tersebut ke database.
+##Tugas3
+1. ModelForm membantu untuk mempermudah membaut form karena fieldnya dapat di buat dalam model django, {% csrf_token %} di wajibkan untuk menjaga dan melindungi form dari serangan CSRF
+2. JSON lebih banyak dipakai dibanding XML karena sintaks yang lebih sederhana serta mudah diproses oleh Javascripts.
+3. View mengambil data dari model django, kemudian melakukan proses serialization untuk mengubah django menjadi sebuah data JSON. Serialization diperlukan karena data yang dikirim dapat melalui HTTP dan dibaca oleh client.

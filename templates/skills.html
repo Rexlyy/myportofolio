@@ -90,6 +90,31 @@
                                 {{ skill.description }}
                             </p>
 
+                            <div class="skill-actions">
+
+                                <a
+                                    href="{% url 'main:update_skill' skill.id %}"
+                                    class="button"
+                                >
+                                    Edit
+                                </a>
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'main:delete_skill' skill.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="button button-danger"
+                                    >
+                                        Delete
+                                    </button>
+                                </form>
+
+                            </div>
+
                         </article>
 
                     {% endfor %}
