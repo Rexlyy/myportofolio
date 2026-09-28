@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 
+from django.contrib.auth.models import User
+
 class Experience(models.Model):
     EXPERIENCE_CHOICES = [
         ('internship', 'Internship'),
@@ -26,10 +28,15 @@ class Experience(models.Model):
         return self.ended_at is None
 
 class Skill(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="skills")
+
     name = models.CharField(max_length=100)
     category= models.CharField(max_length=100)
     proficiency = models.IntegerField()
     description = models.TextField()
 
+    starred_by = models.ManyToManyField(User, related_name="stared_skills", blank=True)
+
     def __str__(self):
         return self.name
+ 
