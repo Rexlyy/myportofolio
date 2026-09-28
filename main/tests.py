@@ -4,90 +4,156 @@ from django.utils import timezone
 
 from main.models import Experience, Skill
 
+from django.contrib.auth.models import User
+
 
 class MainTest(TestCase):
     def setUp(self):
+        self.user = User.objects.create_user(
+            username="testuser",
+            password="testpassword"
+        )
+
         self.experience = Experience.objects.create(
             title="Asisten Dosen PBP",
-            description="Membantu mahasiswa memahami pengembangan web.",
             category="part-time",
+            description="Membantu kegiatan praktikum dan pembelajaran PBP.",
         )
 
     def test_skill_page(self):
         response = self.client.get(
             reverse("main:show_skill")
         )
+
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "skills.html")
 
     def test_skill_data_appears(self):
         skill = Skill.objects.create(
-            name="Pyhton",
-            category="Programming Languange",
+            user=self.user,
+            name="Python",
+            category="Programming Language",
             proficiency=85,
-            description="Programming languange untuk programming develompment dan scripting."
+            description="Programming language untuk programming development dan scripting."
         )
 
-        response=self.client.get(
+        response = self.client.get(
             reverse("main:show_skill")
         )
 
         self.assertContains(response, skill.name)
         self.assertContains(response, skill.category)
-        self.assertContains(response, (skill.proficiency))
+        self.assertContains(response, str(skill.proficiency))
         self.assertContains(response, skill.description)
 
     def test_empty_skill_page(self):
         Skill.objects.all().delete()
 
-        response= self.client.get(
+        response = self.client.get(
             reverse("main:show_skill")
         )
 
         self.assertContains(
-            response, "Belum ada skill yang ditambahkan."
+            response,
+            "Belum ada skill yang ditambahkan."
         )
 
     def test_main_url_is_accessible(self):
-        response = self.client.get(reverse("main:show_main"))
+        response = self.client.get(
+            reverse("main:show_main")
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "index.html")
         self.assertNotContains(response, self.experience.title)
-        self.assertContains(response, f'href="{reverse("main:show_experience")}"')
+        self.assertContains(
+            response,
+            f'href="{reverse("main:show_experience")}"'
+        )
 
     def test_nonexistent_page_returns_404(self):
-        response = self.client.get("/halaman-yang-tidak-ada/")
+        response = self.client.get(
+            "/halaman-yang-tidak-ada/"
+        )
 
         self.assertEqual(response.status_code, 404)
 
     def test_experience_model(self):
-        self.assertEqual(str(self.experience), "Asisten Dosen PBP")
-        self.assertEqual(self.experience.category, "part-time")
-        self.assertTrue(self.experience.is_ongoing)
+        self.assertEqual(
+            str(self.experience),
+            "Asisten Dosen PBP"
+        )
+        self.assertEqual(
+            self.experience.category,
+            "part-time"
+        )
+        self.assertTrue(
+            self.experience.is_ongoing
+        )
 
     def test_experience_page(self):
-        response = self.client.get(reverse("main:show_experience"))
+        response = self.client.get(
+            reverse("main:show_experience")
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "experience.html")
-        self.assertContains(response, self.experience.title)
-        self.assertContains(response, self.experience.description)
-        self.assertContains(response, "Part-Time")
-        self.assertContains(response, "Sedang berlangsung")
-        self.assertContains(response, f'href="{reverse("main:show_main")}"')
+
+        self.assertContains(
+            response,
+            self.experience.title
+        )
+
+        self.assertContains(
+            response,
+            self.experience.description
+        )
+
+        self.assertContains(
+            response,
+            "Part-Time"
+        )
+
+        self.assertContains(
+            response,
+            "Sedang berlangsung"
+        )
+
+        self.assertContains(
+            response,
+            f'href="{reverse("main:show_main")}"'
+        )
 
     def test_empty_experience_page(self):
         Experience.objects.all().delete()
-        response = self.client.get(reverse("main:show_experience"))
 
-        self.assertContains(response, "Belum ada pengalaman yang ditambahkan.")
+        response = self.client.get(
+            reverse("main:show_experience")
+        )
+
+        self.assertContains(
+            response,
+            "Belum ada pengalaman yang ditambahkan."
+        )
 
     def test_completed_experience(self):
         self.experience.ended_at = timezone.now()
         self.experience.save()
-        response = self.client.get(reverse("main:show_experience"))
 
-        self.assertFalse(self.experience.is_ongoing)
-        self.assertContains(response, "Selesai")
-        self.assertNotContains(response, "Sedang berlangsung")
+        response = self.client.get(
+            reverse("main:show_experience")
+        )
+
+        self.assertFalse(
+            self.experience.is_ongoing
+        )
+
+        self.assertContains(
+            response,
+            "Selesai"
+        )
+
+        self.assertNotContains(
+            response,
+            "Sedang berlangsung"
+        )

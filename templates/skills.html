@@ -5,112 +5,121 @@
 {% endblock meta %}
 
 {% block content %}
-
 <main>
+<section class="skills-section">
+<div class="container">
 
-    <section class="skills-section">
+    <div class="skills-top">
+        <div class="skills-heading">
+            <p class="section-kicker">What I Know</p>
+            <h1>My Skills</h1>
+        </div>
 
-        <div class="container">
+        {% if user.is_authenticated and user.is_superuser %}
+            <a href="{% url 'main:create_skill' %}" class="button">
+                Add New Skill
+            </a>
+        {% endif %}
+    </div>
 
-            <div class="skills-top">
+    <form method="get"
+          action="{% url 'main:show_skill' %}"
+          class="skill-search">
 
-                <div class="skills-heading">
-                    <p class="section-kicker">What I Know</p>
-                    <h1>My Skills</h1>
-                </div>
+        <input
+            type="search"
+            name="name"
+            value="{{ name_query }}"
+            placeholder="Cari berdasarkan nama skill"
+            class="skill-search__input"
+            aria-label="Cari berdasarkan nama skill"
+        >
 
-                {% if user.is_authenticated %}
-                    <a href="{% url 'main:create_skill' %}" class="button">
-                        Add New Skill
-                    </a>
-                {% endif %}
-                
-
-            </div>
-
-            <form
-                method="get"
-                action="{% url 'main:show_skill' %}"
-                class="skill-search"
-            >
-                <input
-                    type="search"
-                    name="name"
-                    value="{{ name_query }}"
-                    placeholder="Cari berdasarkan nama skill"
-                    class="skill-search__input"
-                    aria-label="Cari berdasarkan nama skill"
-                >
-
-                <button type="submit" class="button">
-                    Cari
-                </button>
-            </form>
+        <button type="submit" class="button">
+            Cari
+        </button>
+    </form>
 
 
-            {% if skill_list %}
 
-                <div class="skills-grid">
+    {% if skill_list %}
 
-                    {% for skill in skill_list %}
+        <div class="skills-grid">
 
-                        <article class="skill-card">
+            {% for skill in skill_list %}
 
-                            <div class="skill-card-header">
+                <article class="skill-card">
 
-                                <div>
-                                    <h2>{{ skill.name }}</h2>
+                    <div class="skill-card-header">
 
-                                    <p class="skill-category">
-                                        {{ skill.category }}
-                                    </p>
-                                </div>
+                        <div>
+                            <h2>{{ skill.name }}</h2>
 
-                                <span class="skill-proficiency">
-                                    {{ skill.proficiency }}%
-                                </span>
-
-                            </div>
-
-
-                            <div class="proficiency-info">
-
-                                <div class="proficiency-bar">
-
-                                    <div
-                                        class="proficiency-fill"
-                                        style="--skill-width: {{ skill.proficiency }}%;"
-                                    ></div>
-
-                                </div>
-
-                            </div>
-
-
-                            <p class="skill-description">
-                                {{ skill.description }}
+                            <p class="skill-category">
+                                {{ skill.category }}
                             </p>
+                        </div>
 
-                            <div class="skill-actions">
+                        <span class="skill-proficiency">
+                            {{ skill.proficiency }}%
+                        </span>
 
-                                {% if user.is_authenticated %}
-                                    <form
-                                        method="POST"
-                                        action="{% url 'main:toggle_star' skill.id %}"
-                                    >
-                                        {% csrf_token %}
+                    </div>
 
-                                        <button type="submit" class="button">
-                                            {% if user in skill.starred_by.all %}
-                                                ★ Unstar
-                                            {% else %}
-                                                ☆ Star
-                                            {% endif %}
-                                        </button>
-                                    </form>
-                                {% endif %}
 
-                               {% if user.is_superuser or skill.user == user %}
+
+                    <div class="proficiency-info">
+
+                        <div class="proficiency-bar">
+
+                            <div
+                                class="proficiency-fill"
+                                style="--skill-width: {{ skill.proficiency }}%;"
+                            ></div>
+
+                        </div>
+
+                    </div>
+
+                    <p class="skill-description">
+                        {{ skill.description }}
+                    </p>
+
+                    <p class="skill-stars">
+                        ⭐ {{ skill.starred_by.count }} Star
+                    </p>
+
+                    <div class="skill-actions">
+
+                        {% if user.is_authenticated %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'main:toggle_star' skill.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="button"
+                                >
+
+                                    {% if user in skill.starred_by.all %}
+                                        ★ Unstar
+                                    {% else %}
+                                        ☆ Star
+                                    {% endif %}
+
+                                </button>
+
+                            </form>
+
+                        {% endif %}
+
+                        {% if user.is_authenticated %}
+                            {% if user.is_superuser or perms.main.change_skill %}
+
                                 <a
                                     href="{% url 'main:update_skill' skill.id %}"
                                     class="button"
@@ -118,52 +127,57 @@
                                     Edit
                                 </a>
 
-                                <form
-                                    method="POST"
-                                    action="{% url 'main:delete_skill' skill.id %}"
+                            {% endif %}
+                        {% endif %}
+
+
+                        {% if user.is_authenticated and user.is_superuser %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'main:delete_skill' skill.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="button button-danger"
                                 >
-                                    {% csrf_token %}
+                                    Delete
+                                </button>
 
-                                    <button
-                                        type="submit"
-                                        class="button button-danger"
-                                    >
-                                        Delete
-                                    </button>
-                                </form>
-                                {% endif %}
+                            </form>
 
-                            </div>
+                        {% endif %}
 
-                        </article>
+                    </div>
 
-                    {% endfor %}
+                </article>
 
-                </div>
-
-
-            {% else %}
-
-                {% if name_query %}
-
-                    <p class="empty-state">
-                        Tidak ada skill dengan nama "{{ name_query }}".
-                    </p>
-
-                {% else %}
-
-                    <p class="empty-state">
-                        Belum ada skill yang ditambahkan.
-                    </p>
-
-                {% endif %}
-
-            {% endif %}
+            {% endfor %}
 
         </div>
 
-    </section>
+    {% else %}
 
+        {% if name_query %}
+
+            <p class="empty-state">
+                Tidak ada skill dengan nama "{{ name_query }}".
+            </p>
+
+        {% else %}
+
+            <p class="empty-state">
+                Belum ada skill yang ditambahkan.
+            </p>
+
+        {% endif %}
+
+    {% endif %}
+
+</div>
+</section>
 </main>
-
 {% endblock content %}
