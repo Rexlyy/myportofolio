@@ -10,21 +10,41 @@
 <div class="container">
 
     <div class="skills-top">
+
         <div class="skills-heading">
             <p class="section-kicker">What I Know</p>
             <h1>My Skills</h1>
         </div>
 
         {% if user.is_authenticated and user.is_superuser %}
-            <a href="{% url 'main:create_skill' %}" class="button">
+            <button
+                type="button"
+                class="button skill-add-button"
+                popovertarget="add-skill-modal"
+            >
+                <span aria-hidden="true">+</span>
                 Add New Skill
-            </a>
+            </button>
         {% endif %}
+
+        <button
+            class="button button-secondary"
+            onclick="showToast(
+                'Notifikasi Sistem',
+                'Skill berhasil dimuat!',
+                'success'
+            )">
+            Test Toast Notifikasi
+        </button>
+
     </div>
 
-    <form method="get"
-          action="{% url 'main:show_skill' %}"
-          class="skill-search">
+
+    <form
+        method="get"
+        action="{% url 'main:show_skill' %}"
+        class="skill-search"
+    >
 
         <input
             type="search"
@@ -38,146 +58,55 @@
         <button type="submit" class="button">
             Cari
         </button>
+
     </form>
 
+    {% csrf_token %}
+    <!-- Loading -->
+    <div
+        id="skills-loading"
+        class="empty-state"
+    >
+        Memuat skills...
+    </div>
 
 
-    {% if skill_list %}
-
-        <div class="skills-grid">
-
-            {% for skill in skill_list %}
-
-                <article class="skill-card">
-
-                    <div class="skill-card-header">
-
-                        <div>
-                            <h2>{{ skill.name }}</h2>
-
-                            <p class="skill-category">
-                                {{ skill.category }}
-                            </p>
-                        </div>
-
-                        <span class="skill-proficiency">
-                            {{ skill.proficiency }}%
-                        </span>
-
-                    </div>
+    <!-- Error -->
+    <div
+        id="skills-error"
+        class="empty-state"
+        style="display: none;"
+    >
+        Gagal memuat skills.
+    </div>
 
 
-
-                    <div class="proficiency-info">
-
-                        <div class="proficiency-bar">
-
-                            <div
-                                class="proficiency-fill"
-                                style="--skill-width: {{ skill.proficiency }}%;"
-                            ></div>
-
-                        </div>
-
-                    </div>
-
-                    <p class="skill-description">
-                        {{ skill.description }}
-                    </p>
-
-                    <p class="skill-stars">
-                        ⭐ {{ skill.starred_by.count }} Star
-                    </p>
-
-                    <div class="skill-actions">
-
-                        {% if user.is_authenticated %}
-
-                            <form
-                                method="POST"
-                                action="{% url 'main:toggle_star' skill.id %}"
-                            >
-
-                                {% csrf_token %}
-
-                                <button
-                                    type="submit"
-                                    class="button"
-                                >
-
-                                    {% if user in skill.starred_by.all %}
-                                        ★ Unstar
-                                    {% else %}
-                                        ☆ Star
-                                    {% endif %}
-
-                                </button>
-
-                            </form>
-
-                        {% endif %}
-
-                        {% if user.is_authenticated %}
-                            {% if user.is_superuser or perms.main.change_skill %}
-
-                                <a
-                                    href="{% url 'main:update_skill' skill.id %}"
-                                    class="button"
-                                >
-                                    Edit
-                                </a>
-
-                            {% endif %}
-                        {% endif %}
+    <!-- Empty -->
+    <div
+        id="skills-empty"
+        class="empty-state"
+        style="display: none;"
+    >
+        Tidak ada skill yang ditemukan.
+    </div>
 
 
-                        {% if user.is_authenticated and user.is_superuser %}
-
-                            <form
-                                method="POST"
-                                action="{% url 'main:delete_skill' skill.id %}"
-                            >
-
-                                {% csrf_token %}
-
-                                <button
-                                    type="submit"
-                                    class="button button-danger"
-                                >
-                                    Delete
-                                </button>
-
-                            </form>
-
-                        {% endif %}
-
-                    </div>
-
-                </article>
-
-            {% endfor %}
-
-        </div>
-
-    {% else %}
-
-        {% if name_query %}
-
-            <p class="empty-state">
-                Tidak ada skill dengan nama "{{ name_query }}".
-            </p>
-
-        {% else %}
-
-            <p class="empty-state">
-                Belum ada skill yang ditambahkan.
-            </p>
-
-        {% endif %}
-
-    {% endif %}
+    <!-- Skill cards akan dibuat oleh JavaScript -->
+    <div
+        id="skills-grid"
+        class="skills-grid"
+    >
+    </div>
 
 </div>
 </section>
 </main>
+
+{% if user.is_authenticated and user.is_superuser %}
+    {% include "components/skill_form_modal.html" %}
+{% endif %}
+
+{% load static %}
+<script src="{% static 'js/skills.js' %}"></script>
+
 {% endblock content %}

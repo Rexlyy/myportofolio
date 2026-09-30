@@ -12,6 +12,7 @@ from main.views import (\
     login_user, 
     logout_user,
     toggle_star,
+    create_skill_ajax,
 )
 
 
@@ -31,5 +32,7 @@ urlpatterns = [
     path("register/", register, name="register"),
     path("login/", login_user, name="login"),
     path("logout/", logout_user, name="logout"),
+
+    path("skills/add-ajax/",create_skill_ajax,name="create_skill_ajax"),
     
 ]
