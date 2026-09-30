@@ -137,24 +137,63 @@ def get_skills_json(request):
             "category": skill.category,
             "proficiency": skill.proficiency,
             "description": skill.description,
+
             "star_count": skill.starred_by.count(),
+
             "is_starred": (
                 request.user.is_authenticated
                 and skill.starred_by.filter(id=request.user.id).exists()
             ),
+
             "starred_by_names": list(
-                skill.starred_by.values_list("username", flat=True)
+                skill.starred_by.values_list(
+                    "username",
+                    flat=True
+                )
             ),
+
             "is_authenticated": request.user.is_authenticated,
-            "is_superuser": (
+
+            # Hak untuk Edit
+            "can_update": (
+                request.user.is_authenticated
+                and (
+                    request.user.is_superuser
+                    or request.user.has_perm(
+                        "main.change_skill"
+                    )
+                )
+            ),
+
+            # Hak untuk Delete
+            "can_delete": (
                 request.user.is_authenticated
                 and request.user.is_superuser
             ),
+
+            # URL Edit
+            "update_url": reverse(
+                "main:update_skill",
+                args=[skill.id]
+            ),
+
+            # URL Delete
+            "delete_url": reverse(
+                "main:delete_skill",
+                args=[skill.id]
+            ),
+
+            # URL Star
             "toggle_star_url": reverse(
                 "main:toggle_star",
                 args=[skill.id]
             ),
         })
+
+    return JsonResponse({
+        "skills": skills_data
+    })
+    
 
     return JsonResponse({
         "skills": skills_data

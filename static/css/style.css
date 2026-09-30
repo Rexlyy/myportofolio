@@ -425,9 +425,27 @@ h1, .brand {
     margin-bottom: 3rem;
 }
 
+
 .skills-top > .button {
     flex-shrink: 0;
 }
+
+.skill-delete-form {
+    display: inline;
+    margin: 0;
+}
+
+.button-danger {
+    background: #dc2626;
+    color: white;
+    border: none;
+}
+
+.button-danger:hover {
+    opacity: 0.9;
+}
+
+
 
 
 /* Skill Card */

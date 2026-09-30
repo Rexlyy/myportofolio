@@ -75,11 +75,54 @@ function createSkillCard(skill) {
         `;
     }
 
+    let editButton = '';
+
+    if (skill.can_update) {
+        editButton = `
+            <a
+                href="${skill.update_url}"
+                class="button"
+            >
+                Edit
+            </a>
+        `;
+    }
+
+    let deleteButton = '';
+
+    if (skill.can_delete) {
+        deleteButton = `
+            <form
+                method="post"
+                action="${skill.delete_url}"
+                class="skill-delete-form"
+            >
+                <input
+                    type="hidden"
+                    name="csrfmiddlewaretoken"
+                    value="${getCookie('csrftoken')}"
+                >
+
+                <button
+                    type="submit"
+                    class="button button-danger"
+                    onclick="return confirm(
+                        'Yakin ingin menghapus skill ini?'
+                    )"
+                >
+                    Hapus
+                </button>
+            </form>
+        `;
+    }
+
     article.innerHTML = `
         <div class="skill-card-header">
 
             <div>
-                <h2>${escapeHtml(skill.name)}</h2>
+                <h2>
+                    ${escapeHtml(skill.name)}
+                </h2>
 
                 <p class="skill-category">
                     ${escapeHtml(skill.category)}
@@ -106,32 +149,17 @@ function createSkillCard(skill) {
         </p>
 
         <p class="skill-stars">
-            ⭐ <span class="star-count">${Number(skill.star_count)}</span> Star
+            ⭐
+            <span class="star-count">
+                ${Number(skill.star_count)}
+            </span>
+            Star
         </p>
 
         <div class="skill-actions">
-        
             ${starButton}
-
-            ${
-                skill.is_superuser
-                    ? `
-                        <a
-                            href="/skills/${skill.id}/update/"
-                            class="button"
-                        >
-                            Edit
-                        </a>
-
-                        <a
-                            href="/skills/${skill.id}/delete/"
-                            class="button button-danger"
-                        >
-                            Hapus
-                        </a>
-                    `
-                    : ''
-            }
+            ${editButton}
+            ${deleteButton}
         </div>
     `;
 
@@ -139,9 +167,15 @@ function createSkillCard(skill) {
         article.querySelector('.star-button');
 
     if (starButtonElement) {
-        starButtonElement.addEventListener('click', () => {
-            toggleStar(skill, article);
-        });
+        starButtonElement.addEventListener(
+            'click',
+            () => {
+                toggleStar(
+                    skill,
+                    article
+                );
+            }
+        );
     }
 
     return article;
@@ -248,19 +282,21 @@ function getCookie(name) {
     let cookieValue = null;
 
     if (document.cookie && document.cookie !== '') {
-
         const cookies = document.cookie.split(';');
 
         for (let i = 0; i < cookies.length; i++) {
-
             const cookie = cookies[i].trim();
 
             if (
-                cookie.substring(0, name.length + 1)
-                === (name + '=')
+                cookie.substring(
+                    0,
+                    name.length + 1
+                ) === `${name}=`
             ) {
                 cookieValue = decodeURIComponent(
-                    cookie.substring(name.length + 1)
+                    cookie.substring(
+                        name.length + 1
+                    )
                 );
 
                 break;
