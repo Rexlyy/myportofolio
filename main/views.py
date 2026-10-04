@@ -195,10 +195,6 @@ def get_skills_json(request):
     })
     
 
-    return JsonResponse({
-        "skills": skills_data
-    })
-
 @login_required(login_url="/login/")
 def update_skill(request, skill_id):
     skill = get_object_or_404(Skill, pk=skill_id)
