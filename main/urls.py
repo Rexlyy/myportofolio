@@ -1,5 +1,7 @@
 from django.urls import path
 
+from .views import skill_list_api, skill_detail_api,skill_star_api
+
 from main.views import (\
     show_main, 
     show_experience, 
@@ -13,6 +15,9 @@ from main.views import (\
     logout_user,
     toggle_star,
     create_skill_ajax,
+    skill_list_api,
+    skill_detail_api,
+    skill_star_api,
 )
 
 
@@ -34,5 +39,8 @@ urlpatterns = [
     path("logout/", logout_user, name="logout"),
 
     path("skills/add-ajax/",create_skill_ajax,name="create_skill_ajax"),
-    
+
+    path('api/skills-drf/', skill_list_api, name='skill-list-drf'),
+    path('api/skills-drf/<int:skill_id>/', skill_detail_api, name='skill-detail-drf'),
+    path('api/skills-drf/<int:skill_id>/star/',skill_star_api,name='skill-star-drf'),
 ]

@@ -16,6 +16,14 @@ async function fetchSkills(name = '') {
 
     if (!skillsGrid) return;
 
+    // Batalkan request sebelumnya
+    if (skillsController) {
+        skillsController.abort();
+    }
+
+    // Buat controller baru
+    skillsController = new AbortController();
+
     // Reset tampilan
     skillsGrid.innerHTML = '';
     loadingState.style.display = 'block';
@@ -23,30 +31,36 @@ async function fetchSkills(name = '') {
     errorState.style.display = 'none';
 
     try {
+        // Menggunakan DRF API
         const url = name
-            ? `/api/skills/?name=${encodeURIComponent(name)}`
-            : '/api/skills/';
+            ? `/api/skills-drf/?name=${encodeURIComponent(name)}`
+            : '/api/skills-drf/';
 
-        const response = await fetch(url);
+            const response = await fetch(url, {signal: skillsController.signal});
 
         if (!response.ok) {
-            throw new Error('Gagal mengambil data Skill.');
+            throw new Error(`HTTP error: ${response.status}`);
         }
 
         const data = await response.json();
 
         loadingState.style.display = 'none';
 
-        if (!data.skills || data.skills.length === 0) {
+        // DRF mengembalikan array secara langsung
+        if (!Array.isArray(data) || data.length === 0) {
             emptyState.style.display = 'block';
             return;
         }
 
-        data.skills.forEach(skill => {
+        data.forEach(skill => {
             skillsGrid.appendChild(createSkillCard(skill));
         });
 
     } catch (error) {
+        if (error.name === 'AbortError') {
+            return;
+        }
+
         console.error(error);
 
         loadingState.style.display = 'none';
@@ -92,29 +106,15 @@ function createSkillCard(skill) {
 
     if (skill.can_delete) {
         deleteButton = `
-            <form
-                method="post"
-                action="${skill.delete_url}"
-                class="skill-delete-form"
+            <button
+                type="button"
+                class="button button-danger delete-skill-button"
+                data-skill-id="${skill.id}"
             >
-                <input
-                    type="hidden"
-                    name="csrfmiddlewaretoken"
-                    value="${getCookie('csrftoken')}"
-                >
-
-                <button
-                    type="submit"
-                    class="button button-danger"
-                    onclick="return confirm(
-                        'Yakin ingin menghapus skill ini?'
-                    )"
-                >
-                    Hapus
-                </button>
-            </form>
+                Hapus
+            </button>
         `;
-    }
+}
 
     article.innerHTML = `
         <div class="skill-card-header">
@@ -178,6 +178,16 @@ function createSkillCard(skill) {
         );
     }
 
+    const deleteButtonElement =
+    article.querySelector('.delete-skill-button');
+
+    if (deleteButtonElement) {
+        deleteButtonElement.addEventListener('click', () => {
+            deleteSkill(skill, article);
+        });
+    }
+
+
     return article;
 }
 
@@ -185,13 +195,9 @@ async function toggleStar(skill, article) {
     const button = article.querySelector('.star-button');
     const starCount = article.querySelector('.star-count');
 
-    if (!button) {
-        return;
-    }
+    if (!button) return;
 
-    const csrfToken = document.querySelector(
-        '[name=csrfmiddlewaretoken]'
-    )?.value;
+    const csrfToken = getCookie('csrftoken');
 
     if (!csrfToken) {
         showToast(
@@ -206,41 +212,38 @@ async function toggleStar(skill, article) {
         button.disabled = true;
 
         const response = await fetch(
-            `/skills/${skill.id}/star/`,
+            `/api/skills-drf/${skill.id}/star/`,
             {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'Content-Type': 'application/json'
                 }
             }
         );
 
-        if (!response.ok) {
-            throw new Error(
-                `HTTP error: ${response.status}`
-            );
-        }
-
         const data = await response.json();
 
-        if (!data.success) {
+        if (!response.ok) {
             throw new Error(
-                data.error || 'Gagal mengubah Star.'
+                data.detail || 'Gagal mengubah Star.'
             );
         }
 
+        // Mengambil data Skill terbaru dari respons DRF
+        const updatedSkill = data.skill;
+
         // Update jumlah Star
-        starCount.textContent = data.star_count;
+        starCount.textContent = updatedSkill.star_count;
 
         // Update tombol
-        button.textContent = data.is_starred
+        button.textContent = updatedSkill.is_starred
             ? '★ Unstar'
             : '☆ Star';
 
         // Update data lokal
-        skill.is_starred = data.is_starred;
-        skill.star_count = data.star_count;
+        skill.is_starred = updatedSkill.is_starred;
+        skill.star_count = updatedSkill.star_count;
 
         showToast(
             'Berhasil',
@@ -253,7 +256,7 @@ async function toggleStar(skill, article) {
 
         showToast(
             'Error',
-            'Gagal mengubah status Star.',
+            error.message || 'Gagal mengubah status Star.',
             'error'
         );
 
@@ -262,11 +265,72 @@ async function toggleStar(skill, article) {
     }
 }
 
+async function deleteSkill(skill, article) {
+    const confirmed = confirm(
+        `Yakin ingin menghapus skill "${skill.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    const button = article.querySelector('.delete-skill-button');
+
+    try {
+        button.disabled = true;
+
+        const response = await fetch(
+            `/api/skills-drf/${skill.id}/`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP error: ${response.status}`);
+        }
+
+        // Hapus kartu dari halaman
+        article.remove();
+
+        showToast(
+            'Berhasil',
+            'Skill berhasil dihapus!',
+            'success'
+        );
+
+        // Tampilkan empty state jika tidak ada kartu tersisa
+        const skillsGrid = document.getElementById('skills-grid');
+        const emptyState = document.getElementById('skills-empty');
+
+        if (skillsGrid.children.length === 0) {
+            emptyState.style.display = 'block';
+        }
+
+    } catch (error) {
+        console.error(error);
+
+        showToast(
+            'Gagal',
+            'Tidak dapat menghapus Skill.',
+            'error'
+        );
+
+    } finally {
+        if (button.isConnected) {
+            button.disabled = false;
+        }
+    }
+}
+
+
 const SEARCH_DEBOUNCE_DELAY = 300;
 
 let searchDebounceTimer;
+let skillsController = null;
 
-const skillForm = document.getElementById('skill-form');
+const skillForm = document.getElementById('skill-edit-form');
 
 
 function closeSkillModal() {
@@ -309,44 +373,29 @@ function getCookie(name) {
 
 
 async function addSkill(event) {
-
     event.preventDefault();
 
-    if (!skillForm) {
-        return;
-    }
+    if (!skillForm) return;
 
-    const submitButton =
-        skillForm.querySelector(
-            'button[type="submit"]'
-        );
+    const submitButton = skillForm.querySelector(
+        'button[type="submit"]'
+    );
 
     submitButton.disabled = true;
 
     try {
+        const response = await fetch('/api/skills-drf/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: new FormData(skillForm)
+        });
 
-        const response = await fetch(
-            skillForm.action,
-            {
-                method: 'POST',
-
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-
-                body: new FormData(skillForm)
-            }
-        );
-
-        const result =
-            await response.json().catch(() => ({}));
-
+        const result = await response.json();
 
         if (response.ok) {
-
             skillForm.reset();
-
             closeSkillModal();
 
             showToast(
@@ -355,53 +404,49 @@ async function addSkill(event) {
                 'success'
             );
 
+            // Refresh daftar Skill
             fetchSkills(
-                document
-                    .querySelector('.skill-search__input')
+                document.querySelector('.skill-search__input')
                     ?.value.trim() || ''
             );
 
         } else {
+            // DRF mengembalikan error dalam bentuk field: [messages]
+            const errorMessages = Object.entries(result)
+                .map(([field, errors]) => {
+                    const messages = Array.isArray(errors)
+                        ? errors.join(', ')
+                        : errors;
 
-            const errorMessages = result.errors
-                ? Object.values(result.errors)
-                    .flat()
-                    .map(error => error.message)
-                : [
-                    result.message ||
-                    `Terjadi kesalahan (status ${response.status}).`
-                ];
+                    return `${field}: ${messages}`;
+                });
 
             showToast(
                 'Gagal menambahkan Skill',
-                errorMessages.join(' '),
+                errorMessages.join(' | ') || 'Terjadi kesalahan.',
                 'error'
             );
         }
 
     } catch (error) {
-
-        console.error(
-            'Error adding skill:',
-            error
-        );
+        console.error('Error adding skill:', error);
 
         showToast(
             'Gagal menambahkan Skill',
-            'Tidak dapat terhubung ke server. Silakan coba lagi.',
+            'Tidak dapat terhubung ke server.',
             'error'
         );
 
     } finally {
-
         submitButton.disabled = false;
-
     }
 }
 
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchSkills();
+
+    
 
     if (skillForm) {
     skillForm.addEventListener(
@@ -440,3 +485,76 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
+
+async function editSkill(event) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const skillId = form.dataset.skillId;
+
+    const editForm = document.getElementById('skill-edit-form');
+
+    if (editForm && editForm.dataset.skillId) {
+        editForm.addEventListener('submit', editSkill);
+    }
+
+    if (!skillId) return;
+
+    const submitButton = form.querySelector(
+        'button[type="submit"]'
+    );
+
+    const formData = new FormData(form);
+
+    const data = Object.fromEntries(formData.entries());
+
+    submitButton.disabled = true;
+
+    try {
+        const response = await fetch(
+            `/api/skills-drf/${skillId}/`,
+            {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(data)
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            const errors = Object.entries(result)
+                .map(([field, messages]) => {
+                    return `${field}: ${messages.join(', ')}`;
+                });
+
+            throw new Error(
+                errors.join(' | ') || 'Gagal memperbarui Skill.'
+            );
+        }
+
+        showToast(
+            'Berhasil',
+            'Skill berhasil diperbarui!',
+            'success'
+        );
+
+        // Kembali ke halaman Skills
+        window.location.href = '/skills/';
+
+    } catch (error) {
+        console.error(error);
+
+        showToast(
+            'Gagal memperbarui Skill',
+            error.message,
+            'error'
+        );
+
+    } finally {
+        submitButton.disabled = false;
+    }
+}

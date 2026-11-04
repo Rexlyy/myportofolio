@@ -38,7 +38,7 @@
 
             </div>
 
-            <form method="POST" class="skill-form">
+            <form method="POST" class="skill-form" id="skill-edit-form" data-skill-id="{{ skill.id|default:'' }}">
 
                 {% csrf_token %}
 
@@ -62,7 +62,7 @@
 
                 {% endfor %}
 
-                <button type="submit" class="button">
+                <button type="submit" class="button" id="skill-submit-button">
 
                     {% if skill %}
                         Update Skill
