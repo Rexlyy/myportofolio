@@ -62,41 +62,40 @@
     </form>
 
     {% csrf_token %}
-    <!-- Loading -->
-    <div
-        id="skills-loading"
-        class="empty-state"
-    >
+
+        <!-- Loading -->
+    <div id="skills-loading" class="empty-state" style="display:none;">
         Memuat skills...
     </div>
 
-
     <!-- Error -->
-    <div
-        id="skills-error"
-        class="empty-state"
-        style="display: none;"
-    >
+    <div id="skills-error" class="empty-state" style="display:none;">
         Gagal memuat skills.
     </div>
 
-
     <!-- Empty -->
-    <div
-        id="skills-empty"
-        class="empty-state"
-        style="display: none;"
-    >
-        Tidak ada skill yang ditemukan.
+    <div id="skills-empty" class="empty-state" style="display:none;">
+        Belum ada skill yang ditambahkan.
     </div>
 
-
-    <!-- Skill cards akan dibuat oleh JavaScript -->
-    <div
-        id="skills-grid"
-        class="skills-grid"
-    >
+    <!-- Skill cards -->
+    <div id="skills-grid" class="skills-grid">
+        {% for skill in skills %}
+            <article class="skill-card">
+                <h2>{{ skill.name }}</h2>
+                <p class="skill-category">{{ skill.category }}</p>
+                <p class="skill-description">{{ skill.description }}</p>
+                <span class="skill-proficiency">
+                    {{ skill.proficiency }}%
+                </span>
+            </article>
+        {% empty %}
+            <p class="empty-state">
+                Belum ada skill yang ditambahkan.
+            </p>
+        {% endfor %}
     </div>
+
 
 </div>
 </section>

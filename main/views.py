@@ -18,16 +18,6 @@ from django.views.decorators.http import require_POST
 
 import datetime
 
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from .serializers import SkillSerializer
-from rest_framework import status
-
-from rest_framework.decorators import (api_view,permission_classes,authentication_classes,)
-from rest_framework.authentication import SessionAuthentication
-from .permissions import IsSkillEditorOrReadOnly
-from rest_framework.permissions import IsAuthenticated
-
 def show_main(request):
     experience_list = Experience.objects.all()
     skill_list = Skill.objects.all()  
@@ -55,17 +45,19 @@ def show_experience(request):
 def show_skill(request):
     name_query = request.GET.get("name", "").strip()
 
+    skills = Skill.objects.all()
+
+    if name_query:
+        skills = skills.filter(name__icontains=name_query)
+
     context = {
         "name": "Lynorexly Imanuel Tatipikalawan",
         "name_query": name_query,
+        "skills": skills,
         "form": SkillForm(),
     }
 
-    return render(
-        request,
-        "skills.html",
-        context
-    )
+    return render(request, "skills.html", context)
 
 
 @login_required(login_url="/login/")
@@ -306,113 +298,3 @@ def toggle_star(request, skill_id):
 
     messages.success(request, message)
     return redirect("main:show_skill")
-
-
-@api_view(['GET', 'POST'])
-@authentication_classes([SessionAuthentication])
-@permission_classes([IsSkillEditorOrReadOnly])
-def skill_list_api(request):
-
-    if request.method == 'GET':
-        name_query = request.GET.get('name', '').strip()
-        skills = Skill.objects.all()
-
-        if name_query:
-            skills = skills.filter(name__icontains=name_query)
-
-        serializer = SkillSerializer(
-            skills,
-            many=True,
-            context={'request': request}
-        )
-        return Response(serializer.data)
-
-    elif request.method == 'POST':
-        serializer = SkillSerializer(
-            data=request.data,
-            context={'request': request}
-        )
-
-        if serializer.is_valid():
-            skill = serializer.save(user=request.user)
-
-            return Response(
-                SkillSerializer(
-                    skill,
-                    context={'request': request}
-                ).data,
-                status=status.HTTP_201_CREATED
-            )
-
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-
-@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
-@authentication_classes([SessionAuthentication])
-@permission_classes([IsSkillEditorOrReadOnly])
-def skill_detail_api(request, skill_id):
-
-    skill = get_object_or_404(Skill, pk=skill_id)
-
-    # Jalankan pemeriksaan object permission secara manual
-    permission = IsSkillEditorOrReadOnly()
-
-    if not permission.has_object_permission(request, None, skill):
-        return Response(
-            {'detail': 'Permission denied.'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-
-    if request.method == 'GET':
-        serializer = SkillSerializer(
-            skill,
-            context={'request': request}
-        )
-        return Response(serializer.data)
-
-    elif request.method in ['PUT', 'PATCH']:
-        serializer = SkillSerializer(
-            skill,
-            data=request.data,
-            partial=(request.method == 'PATCH'),
-            context={'request': request}
-        )
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    elif request.method == 'DELETE':
-        skill.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-@api_view(['POST'])
-@authentication_classes([SessionAuthentication])
-@permission_classes([IsAuthenticated])
-def skill_star_api(request, skill_id):
-    skill = get_object_or_404(Skill, pk=skill_id)
-
-    if skill.starred_by.filter(pk=request.user.pk).exists():
-        skill.starred_by.remove(request.user)
-        message = "Skill unstarred successfully."
-    else:
-        skill.starred_by.add(request.user)
-        message = "Skill starred successfully."
-
-    serializer = SkillSerializer(
-        skill,
-        context={'request': request}
-    )
-
-    return Response({
-        'message': message,
-        'skill': serializer.data
-    })

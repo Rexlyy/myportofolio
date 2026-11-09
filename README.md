@@ -4,10 +4,12 @@ NPM : 2506546932
 
 Kelas : PBP F
 
-## Tugas5
+## Tugas6
 
-1. Debouncing adalah teknik untuk menunda request sampai pengguna mengetuik selaama beberapa waktu tertentu. Teknik ini membantu mengurangi jumlah request AJAX sehingga lebih efisien.
+1. REST adalah arsitektur API berbasis HTTP. JSON saja belum cukup; API juga harus mengikuti prinsip REST, PUT: mengganti seluruh data, dan PATCH: mengubah sebagian daya.
 
-2. Penggunaan await untuk menunggu hasil dari fetch sebelum kode selanjutnya dijalankan. Kalau tidak menggunakan await, fetch nya akan menghasilkan promise sehingga response tidak dapat di gunakan.
+2. Serializers mengubah bentuk MODEL ke JSON serta memvaliadi data masuk, lebih praktis dan terstruktur mengurangi kode manual jika dibandingkan dengan JsonResponse.
 
-3. XSS (Cross-Site Scripting) merupakan serangan dengan inject atau memasukan kode HTML/javaScripts berbahaya melalui input. Hal ini diperlukan escapeHTML() sehingga kode berbahaya tidak langsung di eksekui.
+3. Autentikasi itu memeriksa identitas pengguna atau user, sedangkan otorisasi memeriksa hak aksesnya. Menyembunyikan tombol di template itu tidak cukup karena pengguna/user bisa mengirim request langsung melalui API atau bahkan browser.
+
+4. CSRF melindungi aplikasi dari request berbahaya yang dikirim dengan  menggunakan sesi login pengguna. force_authenticate() melalui proses autentikasi normal sehingga tidak bisa digunakan karena tidak cukup untuk menguji CSRF. Gunakan APIClient(enforce_csrf_checks=True) serta kirim request tanpa token CSRF, maka pastikan server akan menolaknya.

@@ -8,7 +8,6 @@ from main.models import Skill
 class SkillSerializer(serializers.ModelSerializer):
     star_count = serializers.SerializerMethodField()
     is_starred = serializers.SerializerMethodField()
-    starred_by_names = serializers.SerializerMethodField()
 
     is_authenticated = serializers.SerializerMethodField()
     can_update = serializers.SerializerMethodField()
@@ -19,8 +18,35 @@ class SkillSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Skill
-        fields = '__all__'
-        read_only_fields = ('id', 'user', 'starred_by')
+
+        fields = [
+            'id',
+            'name',
+            'category',
+            'proficiency',
+            'description',
+
+            'star_count',
+            'is_starred',
+
+            'is_authenticated',
+            'can_update',
+            'can_delete',
+
+            'update_url',
+            'delete_url',
+        ]
+
+        read_only_fields = [
+            'id',
+            'star_count',
+            'is_starred',
+            'is_authenticated',
+            'can_update',
+            'can_delete',
+            'update_url',
+            'delete_url',
+        ]
 
     def validate_name(self, value):
         value = strip_tags(value).strip()
@@ -28,6 +54,14 @@ class SkillSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError(
                 "Skill name cannot be empty."
+            )
+
+        return value
+
+    def validate_proficiency(self, value):
+        if not 0 <= value <= 100:
+            raise serializers.ValidationError(
+                "Proficiency must be between 0 and 100."
             )
 
         return value
@@ -46,10 +80,6 @@ class SkillSerializer(serializers.ModelSerializer):
 
         return obj.starred_by.filter(pk=request.user.pk).exists()
 
-    def get_starred_by_names(self, obj):
-        return ", ".join(
-            user.username for user in obj.starred_by.all()
-        )
 
     def get_is_authenticated(self, obj):
         request = self.context.get("request")

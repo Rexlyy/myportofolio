@@ -1,3 +1,20 @@
+
+// ==========================================
+// 1. CONFIGURATION
+// ==========================================
+
+const API_URL = '/api/v1/skills/';
+const SEARCH_DEBOUNCE_DELAY = 300;
+
+let searchDebounceTimer = null;
+let skillsController = null;
+
+
+// ==========================================
+// 2. UTILITY FUNCTIONS
+// ==========================================
+
+// Mencegah HTML berbahaya masuk ke halaman
 function escapeHtml(value) {
     return String(value ?? '')
         .replaceAll('&', '&amp;')
@@ -8,6 +25,89 @@ function escapeHtml(value) {
 }
 
 
+// Mengambil CSRF token dari cookie atau input hidden
+function getCookie(name) {
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+
+        for (const item of cookies) {
+            const cookie = item.trim();
+
+            if (cookie.startsWith(`${name}=`)) {
+                cookieValue = decodeURIComponent(
+                    cookie.substring(name.length + 1)
+                );
+                break;
+            }
+        }
+    }
+
+    if (!cookieValue) {
+        cookieValue = document.querySelector(
+            '[name=csrfmiddlewaretoken]'
+        )?.value || null;
+    }
+
+    return cookieValue;
+}
+
+
+// Menampilkan notifikasi
+function notify(title, message, type = 'info') {
+    if (typeof showToast === 'function') {
+        showToast(title, message, type);
+    } else {
+        alert(`${title}: ${message}`);
+    }
+}
+
+
+// Mengubah error DRF menjadi pesan yang mudah dibaca
+function getErrorMessage(data) {
+    if (!data) {
+        return 'Terjadi kesalahan pada server.';
+    }
+
+    if (typeof data.detail === 'string') {
+        return data.detail;
+    }
+
+    if (typeof data === 'string') {
+        return data;
+    }
+
+    return Object.entries(data)
+        .map(([field, errors]) => {
+            const messages = Array.isArray(errors)
+                ? errors.join(', ')
+                : String(errors);
+
+            return `${field}: ${messages}`;
+        })
+        .join(' | ') || 'Terjadi kesalahan.';
+}
+
+
+// Mengambil JSON response dengan aman
+async function readResponse(response) {
+    const text = await response.text();
+
+    if (!text) return {};
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        return { detail: text };
+    }
+}
+
+
+// ==========================================
+// 3. FETCH SKILLS
+// ==========================================
+
 async function fetchSkills(name = '') {
     const skillsGrid = document.getElementById('skills-grid');
     const loadingState = document.getElementById('skills-loading');
@@ -16,39 +116,49 @@ async function fetchSkills(name = '') {
 
     if (!skillsGrid) return;
 
-    // Batalkan request sebelumnya
+    // Batalkan request pencarian sebelumnya
     if (skillsController) {
         skillsController.abort();
     }
 
-    // Buat controller baru
     skillsController = new AbortController();
+
+    const controller = skillsController;
 
     // Reset tampilan
     skillsGrid.innerHTML = '';
-    loadingState.style.display = 'block';
-    emptyState.style.display = 'none';
-    errorState.style.display = 'none';
+
+    if (loadingState) loadingState.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'none';
+    if (errorState) errorState.style.display = 'none';
 
     try {
-        // Menggunakan DRF API
         const url = name
-            ? `/api/skills-drf/?name=${encodeURIComponent(name)}`
-            : '/api/skills-drf/';
+            ? `${API_URL}?name=${encodeURIComponent(name)}`
+            : API_URL;
 
-            const response = await fetch(url, {signal: skillsController.signal});
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            signal: controller.signal
+        });
+
+        const data = await readResponse(response);
 
         if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
+            throw new Error(getErrorMessage(data));
         }
 
-        const data = await response.json();
+        if (!Array.isArray(data)) {
+            throw new Error('Format data Skill tidak sesuai.');
+        }
 
-        loadingState.style.display = 'none';
+        if (loadingState) loadingState.style.display = 'none';
 
-        // DRF mengembalikan array secara langsung
-        if (!Array.isArray(data) || data.length === 0) {
-            emptyState.style.display = 'block';
+        if (data.length === 0) {
+            if (emptyState) emptyState.style.display = 'block';
             return;
         }
 
@@ -57,24 +167,31 @@ async function fetchSkills(name = '') {
         });
 
     } catch (error) {
-        if (error.name === 'AbortError') {
-            return;
+        if (error.name === 'AbortError') return;
+
+        console.error('Fetch skills error:', error);
+
+        if (loadingState) loadingState.style.display = 'none';
+
+        if (errorState) {
+            errorState.style.display = 'block';
+            errorState.textContent = error.message ||
+                'Gagal memuat data Skill.';
         }
-
-        console.error(error);
-
-        loadingState.style.display = 'none';
-        errorState.style.display = 'block';
-        errorState.textContent = 'Gagal memuat data Skill.';
     }
 }
 
+
+// ==========================================
+// 4. CREATE SKILL CARD
+// ==========================================
 
 function createSkillCard(skill) {
     const article = document.createElement('article');
 
     article.className = 'skill-card';
 
+    // Tombol Star
     let starButton = '';
 
     if (skill.is_authenticated) {
@@ -82,19 +199,20 @@ function createSkillCard(skill) {
             <button
                 type="button"
                 class="button star-button"
-                data-skill-id="${skill.id}"
+                data-skill-id="${escapeHtml(skill.id)}"
             >
                 ${skill.is_starred ? '★ Unstar' : '☆ Star'}
             </button>
         `;
     }
 
+    // Tombol Edit
     let editButton = '';
 
-    if (skill.can_update) {
+    if (skill.can_update && skill.update_url) {
         editButton = `
             <a
-                href="${skill.update_url}"
+                href="${escapeHtml(skill.update_url)}"
                 class="button"
             >
                 Edit
@@ -102,6 +220,7 @@ function createSkillCard(skill) {
         `;
     }
 
+    // Tombol Delete
     let deleteButton = '';
 
     if (skill.can_delete) {
@@ -109,20 +228,22 @@ function createSkillCard(skill) {
             <button
                 type="button"
                 class="button button-danger delete-skill-button"
-                data-skill-id="${skill.id}"
+                data-skill-id="${escapeHtml(skill.id)}"
             >
                 Hapus
             </button>
         `;
-}
+    }
+
+    const proficiency = Math.min(
+        100,
+        Math.max(0, Number(skill.proficiency) || 0)
+    );
 
     article.innerHTML = `
         <div class="skill-card-header">
-
             <div>
-                <h2>
-                    ${escapeHtml(skill.name)}
-                </h2>
+                <h2>${escapeHtml(skill.name)}</h2>
 
                 <p class="skill-category">
                     ${escapeHtml(skill.category)}
@@ -130,16 +251,15 @@ function createSkillCard(skill) {
             </div>
 
             <span class="skill-proficiency">
-                ${Number(skill.proficiency)}%
+                ${proficiency}%
             </span>
-
         </div>
 
         <div class="proficiency-info">
             <div class="proficiency-bar">
                 <div
                     class="proficiency-fill"
-                    style="--skill-width: ${Number(skill.proficiency)}%;"
+                    style="--skill-width: ${proficiency}%;"
                 ></div>
             </div>
         </div>
@@ -151,7 +271,7 @@ function createSkillCard(skill) {
         <p class="skill-stars">
             ⭐
             <span class="star-count">
-                ${Number(skill.star_count)}
+                ${Number(skill.star_count) || 0}
             </span>
             Star
         </p>
@@ -163,23 +283,19 @@ function createSkillCard(skill) {
         </div>
     `;
 
+    // Event Star
     const starButtonElement =
         article.querySelector('.star-button');
 
     if (starButtonElement) {
-        starButtonElement.addEventListener(
-            'click',
-            () => {
-                toggleStar(
-                    skill,
-                    article
-                );
-            }
-        );
+        starButtonElement.addEventListener('click', () => {
+            toggleStar(skill, article);
+        });
     }
 
+    // Event Delete
     const deleteButtonElement =
-    article.querySelector('.delete-skill-button');
+        article.querySelector('.delete-skill-button');
 
     if (deleteButtonElement) {
         deleteButtonElement.addEventListener('click', () => {
@@ -187,9 +303,13 @@ function createSkillCard(skill) {
         });
     }
 
-
     return article;
 }
+
+
+// ==========================================
+// 5. STAR / UNSTAR SKILL
+// ==========================================
 
 async function toggleStar(skill, article) {
     const button = article.querySelector('.star-button');
@@ -200,11 +320,7 @@ async function toggleStar(skill, article) {
     const csrfToken = getCookie('csrftoken');
 
     if (!csrfToken) {
-        showToast(
-            'Error',
-            'CSRF token tidak ditemukan.',
-            'error'
-        );
+        notify('Error', 'CSRF token tidak ditemukan.', 'error');
         return;
     }
 
@@ -212,58 +328,63 @@ async function toggleStar(skill, article) {
         button.disabled = true;
 
         const response = await fetch(
-            `/api/skills-drf/${skill.id}/star/`,
+            `${API_URL}${skill.id}/star/`,
             {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
+                    'Accept': 'application/json'
                 }
             }
         );
 
-        const data = await response.json();
+        const data = await readResponse(response);
 
         if (!response.ok) {
-            throw new Error(
-                data.detail || 'Gagal mengubah Star.'
-            );
+            throw new Error(getErrorMessage(data));
         }
 
-        // Mengambil data Skill terbaru dari respons DRF
+        // API mengembalikan data Skill terbaru
         const updatedSkill = data.skill;
 
-        // Update jumlah Star
-        starCount.textContent = updatedSkill.star_count;
+        if (!updatedSkill) {
+            throw new Error('Respons Skill tidak ditemukan.');
+        }
 
-        // Update tombol
+        // Perbarui jumlah Star
+        if (starCount) {
+            starCount.textContent = updatedSkill.star_count;
+        }
+
+        // Perbarui tombol
         button.textContent = updatedSkill.is_starred
             ? '★ Unstar'
             : '☆ Star';
 
-        // Update data lokal
+        // Perbarui data lokal
         skill.is_starred = updatedSkill.is_starred;
         skill.star_count = updatedSkill.star_count;
 
-        showToast(
+        notify(
             'Berhasil',
-            data.message,
+            data.message || 'Status Star berhasil diperbarui.',
             'success'
         );
 
     } catch (error) {
-        console.error(error);
+        console.error('Star error:', error);
 
-        showToast(
-            'Error',
-            error.message || 'Gagal mengubah status Star.',
-            'error'
-        );
+        notify('Gagal mengubah Star', error.message, 'error');
 
     } finally {
         button.disabled = false;
     }
 }
+
+
+// ==========================================
+// 6. DELETE SKILL
+// ==========================================
 
 async function deleteSkill(skill, article) {
     const confirmed = confirm(
@@ -273,65 +394,64 @@ async function deleteSkill(skill, article) {
     if (!confirmed) return;
 
     const button = article.querySelector('.delete-skill-button');
+    const csrfToken = getCookie('csrftoken');
+
+    if (!csrfToken) {
+        notify('Error', 'CSRF token tidak ditemukan.', 'error');
+        return;
+    }
 
     try {
-        button.disabled = true;
+        if (button) button.disabled = true;
 
         const response = await fetch(
-            `/api/skills-drf/${skill.id}/`,
+            `${API_URL}${skill.id}/`,
             {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': csrfToken
                 }
             }
         );
 
         if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
+            const data = await readResponse(response);
+            throw new Error(getErrorMessage(data));
         }
 
         // Hapus kartu dari halaman
         article.remove();
 
-        showToast(
+        notify(
             'Berhasil',
             'Skill berhasil dihapus!',
             'success'
         );
 
-        // Tampilkan empty state jika tidak ada kartu tersisa
+        // Periksa apakah masih ada Skill
         const skillsGrid = document.getElementById('skills-grid');
         const emptyState = document.getElementById('skills-empty');
 
-        if (skillsGrid.children.length === 0) {
-            emptyState.style.display = 'block';
+        if (skillsGrid && skillsGrid.children.length === 0) {
+            if (emptyState) emptyState.style.display = 'block';
         }
 
     } catch (error) {
-        console.error(error);
+        console.error('Delete skill error:', error);
 
-        showToast(
-            'Gagal',
-            'Tidak dapat menghapus Skill.',
-            'error'
-        );
+        notify('Gagal menghapus Skill', error.message, 'error');
 
     } finally {
-        if (button.isConnected) {
+        if (button && button.isConnected) {
             button.disabled = false;
         }
     }
 }
 
 
-const SEARCH_DEBOUNCE_DELAY = 300;
-
-let searchDebounceTimer;
-let skillsController = null;
-
-const skillForm = document.getElementById('skill-edit-form');
-
+// ==========================================
+// 7. CLOSE ADD SKILL MODAL
+// ==========================================
 
 function closeSkillModal() {
     const modal = document.getElementById('add-skill-modal');
@@ -342,149 +462,79 @@ function closeSkillModal() {
 }
 
 
-function getCookie(name) {
-    let cookieValue = null;
-
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-
-            if (
-                cookie.substring(
-                    0,
-                    name.length + 1
-                ) === `${name}=`
-            ) {
-                cookieValue = decodeURIComponent(
-                    cookie.substring(
-                        name.length + 1
-                    )
-                );
-
-                break;
-            }
-        }
-    }
-
-    return cookieValue;
-}
-
+// ==========================================
+// 8. ADD SKILL
+// ==========================================
 
 async function addSkill(event) {
     event.preventDefault();
 
-    if (!skillForm) return;
+    const form = event.currentTarget;
 
-    const submitButton = skillForm.querySelector(
+    const submitButton = form.querySelector(
         'button[type="submit"]'
     );
 
-    submitButton.disabled = true;
+    const csrfToken = getCookie('csrftoken');
+
+    if (!csrfToken) {
+        notify('Error', 'CSRF token tidak ditemukan.', 'error');
+        return;
+    }
 
     try {
-        const response = await fetch('/api/skills-drf/', {
+        if (submitButton) submitButton.disabled = true;
+
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken')
+                'X-CSRFToken': csrfToken,
+                'Accept': 'application/json'
             },
-            body: new FormData(skillForm)
+            body: new FormData(form)
         });
 
-        const result = await response.json();
+        const data = await readResponse(response);
 
-        if (response.ok) {
-            skillForm.reset();
-            closeSkillModal();
-
-            showToast(
-                'Berhasil',
-                'Skill baru berhasil ditambahkan!',
-                'success'
-            );
-
-            // Refresh daftar Skill
-            fetchSkills(
-                document.querySelector('.skill-search__input')
-                    ?.value.trim() || ''
-            );
-
-        } else {
-            // DRF mengembalikan error dalam bentuk field: [messages]
-            const errorMessages = Object.entries(result)
-                .map(([field, errors]) => {
-                    const messages = Array.isArray(errors)
-                        ? errors.join(', ')
-                        : errors;
-
-                    return `${field}: ${messages}`;
-                });
-
-            showToast(
-                'Gagal menambahkan Skill',
-                errorMessages.join(' | ') || 'Terjadi kesalahan.',
-                'error'
-            );
+        if (!response.ok) {
+            throw new Error(getErrorMessage(data));
         }
 
-    } catch (error) {
-        console.error('Error adding skill:', error);
+        form.reset();
 
-        showToast(
+        closeSkillModal();
+
+        notify(
+            'Berhasil',
+            'Skill baru berhasil ditambahkan!',
+            'success'
+        );
+
+        // Muat ulang data tanpa reload halaman
+        const searchInput = document.querySelector(
+            '.skill-search__input'
+        );
+
+        fetchSkills(searchInput?.value.trim() || '');
+
+    } catch (error) {
+        console.error('Add skill error:', error);
+
+        notify(
             'Gagal menambahkan Skill',
-            'Tidak dapat terhubung ke server.',
+            error.message,
             'error'
         );
 
     } finally {
-        submitButton.disabled = false;
+        if (submitButton) submitButton.disabled = false;
     }
 }
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    fetchSkills();
-
-    
-
-    if (skillForm) {
-    skillForm.addEventListener(
-        'submit',
-        addSkill
-    );
-    }
-
-    const searchForm = document.querySelector('.skill-search');
-    const searchInput = document.querySelector('.skill-search__input');
-
-    if (!searchForm || !searchInput) {
-        return;
-    }
-
-
-    searchInput.addEventListener('input', () => {
-
-        clearTimeout(searchDebounceTimer);
-
-        searchDebounceTimer = setTimeout(() => {
-            fetchSkills(searchInput.value.trim());
-        }, SEARCH_DEBOUNCE_DELAY);
-
-    });
-
-
-    searchForm.addEventListener('submit', (event) => {
-
-        event.preventDefault();
-
-        clearTimeout(searchDebounceTimer);
-
-        fetchSkills(searchInput.value.trim());
-
-    });
-
-});
+// ==========================================
+// 9. EDIT SKILL
+// ==========================================
 
 async function editSkill(event) {
     event.preventDefault();
@@ -492,51 +542,50 @@ async function editSkill(event) {
     const form = event.currentTarget;
     const skillId = form.dataset.skillId;
 
-    const editForm = document.getElementById('skill-edit-form');
-
-    if (editForm && editForm.dataset.skillId) {
-        editForm.addEventListener('submit', editSkill);
-    }
-
+    // Tidak ada ID berarti form bukan untuk Edit
     if (!skillId) return;
 
     const submitButton = form.querySelector(
         'button[type="submit"]'
     );
 
-    const formData = new FormData(form);
+    const csrfToken = getCookie('csrftoken');
 
-    const data = Object.fromEntries(formData.entries());
-
-    submitButton.disabled = true;
+    if (!csrfToken) {
+        notify('Error', 'CSRF token tidak ditemukan.', 'error');
+        return;
+    }
 
     try {
+        if (submitButton) submitButton.disabled = true;
+
+        // Ubah FormData menjadi JSON
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // Hapus field CSRF dari data JSON
+        delete data.csrfmiddlewaretoken;
+
         const response = await fetch(
-            `/api/skills-drf/${skillId}/`,
+            `${API_URL}${skillId}/`,
             {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify(data)
             }
         );
 
-        const result = await response.json();
+        const result = await readResponse(response);
 
         if (!response.ok) {
-            const errors = Object.entries(result)
-                .map(([field, messages]) => {
-                    return `${field}: ${messages.join(', ')}`;
-                });
-
-            throw new Error(
-                errors.join(' | ') || 'Gagal memperbarui Skill.'
-            );
+            throw new Error(getErrorMessage(result));
         }
 
-        showToast(
+        notify(
             'Berhasil',
             'Skill berhasil diperbarui!',
             'success'
@@ -546,15 +595,66 @@ async function editSkill(event) {
         window.location.href = '/skills/';
 
     } catch (error) {
-        console.error(error);
+        console.error('Edit skill error:', error);
 
-        showToast(
+        notify(
             'Gagal memperbarui Skill',
             error.message,
             'error'
         );
 
     } finally {
-        submitButton.disabled = false;
+        if (submitButton) submitButton.disabled = false;
     }
 }
+
+
+// ==========================================
+// 10. INITIALIZE EVENT LISTENERS
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Ambil daftar Skill
+    fetchSkills();
+
+    // Form Add melalui modal
+    const addForm = document.getElementById('skill-form');
+
+    if (addForm) {
+        addForm.addEventListener('submit', addSkill);
+    }
+
+    // Form Edit melalui halaman skill_form.html
+    const editForm = document.getElementById('skill-edit-form');
+
+    if (editForm && editForm.dataset.skillId) {
+        editForm.addEventListener('submit', editSkill);
+    }
+
+    // Search Skill
+    const searchForm = document.querySelector('.skill-search');
+    const searchInput = document.querySelector(
+        '.skill-search__input'
+    );
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchDebounceTimer);
+
+            searchDebounceTimer = setTimeout(() => {
+                fetchSkills(searchInput.value.trim());
+            }, SEARCH_DEBOUNCE_DELAY);
+        });
+    }
+
+    if (searchForm && searchInput) {
+        searchForm.addEventListener('submit', event => {
+            event.preventDefault();
+
+            clearTimeout(searchDebounceTimer);
+
+            fetchSkills(searchInput.value.trim());
+        });
+    }
+});
