@@ -2,7 +2,7 @@ from django.utils.html import strip_tags
 from django.urls import reverse
 from rest_framework import serializers
 
-from main.models import Skill
+from main.models import Skill,Project
 
 
 class SkillSerializer(serializers.ModelSerializer):
@@ -116,3 +116,36 @@ class SkillSerializer(serializers.ModelSerializer):
             "main:delete_skill",
             args=[obj.pk]
         )
+
+class ProjectSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Project
+
+        fields = [
+            'id',
+            'title',
+            'description',
+            'tech_stack',
+            'project_url',
+            'project_image_url',
+            'created_at',
+        ]
+
+        read_only_fields = [
+            'id',
+            'created_at',
+        ]
+
+    def validate_title(self, value):
+        value = strip_tags(value).strip()
+
+        if not value:
+            raise serializers.ValidationError(
+                "Project title cannot be empty."
+            )
+
+        return value
+
+    def validate_description(self, value):
+        return strip_tags(value)

@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 from rest_framework.decorators import (
     api_view,
@@ -10,8 +11,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from main.models import Skill
-from main.serializers import SkillSerializer
+from main.models import Skill, Project
+from main.serializers import SkillSerializer, ProjectSerializer
 from main.permissions import IsSkillEditorOrReadOnly
 
 
@@ -131,3 +132,36 @@ def skill_star_api(request, skill_id):
         'message': message,
         'skill': serializer.data
     })
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def project_list_create_api(request):
+
+    # GET: Mengambil semua project
+    if request.method == 'GET':
+        projects = Project.objects.all().order_by('-created_at')
+
+        serializer = ProjectSerializer(
+            projects,
+            many=True,
+            context={'request': request}
+        )
+
+        return Response(serializer.data)
+
+    # POST: Menambahkan project baru
+    elif request.method == 'POST':
+        serializer = ProjectSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save(owner=request.user)
+
+            return Response(
+                serializer.data,
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(
+            serializer.errors,
+            status=status.HTTP_400_BAD_REQUEST
+        )

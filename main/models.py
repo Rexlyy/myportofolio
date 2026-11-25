@@ -39,4 +39,30 @@ class Skill(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Project(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="projects",
+    )
+
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    tech_stack = models.JSONField(default=list, blank=True)
+    project_url = models.URLField(blank=True)
+    project_image_url = models.URLField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
  
